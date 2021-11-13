@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Title</title>
+</head>
+<script>
+    function renderNode(data, parentElement) {
+        if (data) {
+            var ul = document.createElement("ul");
+            var li = document.createElement("li");
+            li.setAttribute("id", "node" + data.id);
+            li.setAttribute("data-id", data.id);
+            if (data.parentId !== null) {
+                li.setAttribute("data-parent-id", data.parentId);
+            }
+            li.appendChild(document.createTextNode(data.value));
+            ul.appendChild(li);
+            parentElement.appendChild(ul);
+            for (let i = 0; i < data.nodes.length; i++) {
+                renderNode(data.nodes[i], ul);
+            }
+        }
+    }
+
+    function loadOriginTree() {
+        fetch("/tree/load-origin-tree",
+            {
+                method: "GET",
+                headers:{"content-type":"application/json"}
+            })
+            .then( response => {
+                return response.json();
+            })
+            .then( data => {
+                var div = document.getElementById("tree");
+                div.innerHTML = "";
+                renderNode(data, div);
+            });
+    }
+
+    function copyRootNode() {
+        // let copyDiv = document.getElementById("copy");
+        // copyDiv.innerHTML = "";
+        // let copy = document.getElementById(document.getElementById("copyId").value);
+        //
+        // let id = parseInt(copy.getAttribute("data-id"));
+        // let postBody = {id: id, value: copy.textContent, nodes: []}
+        // if (copy.getAttribute("data-parent-id") !== null) {
+        //     postBody.parentId = parseInt(copy.getAttribute("data-parent-id"));
+        // }
+        // let nodes = document.querySelectorAll('li[data-parent-id="' + id + '"]');
+        // for (let i = 0; i < nodes.length; i++) {
+        //     postBody.nodes.push({
+        //         id: parseInt(nodes[i].getAttribute("data-id"))
+        //     });
+        // }
+        // fetch("/tree/node/copy2",
+        //     {
+        //         method: "POST",
+        //         headers:{"content-type":"application/json"},
+        //         body: JSON.stringify(postBody)
+        //     })
+        //     .then( response => {
+        //         return response.json();
+        //     })
+        //     .then( data => {
+        //         copyDiv.append(copy.cloneNode(true));
+        //     });
+
+        var size = 7;
+        var counter = 0;
+        for(var i=0; i<size; i++) {
+            for (let j = 0; j < i; j++) {
+                counter++;
+            }
+        }
+        console.log(counter);
+    }
+</script>
+<body>
+<div id="tree"></div>
+<div id="copy"></div>
+<button onclick="loadOriginTree(); return false;">Load origin tree</button>
+<input type="text" id="copyId" value="node"/>
+<button onclick="copyRootNode(); return false;">Copy root node</button>
+</body>
+</html>
