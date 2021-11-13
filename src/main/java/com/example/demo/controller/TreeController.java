@@ -41,7 +41,7 @@ public class TreeController {
                 .build();
     }
 
-    @PostMapping("/node/copy2")
+    @PostMapping("/node/copy")
     public Node nodeCopy(@RequestBody Node node) {
         if (node.getParentId() == null) {
             root = node;

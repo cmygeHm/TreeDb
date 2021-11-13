@@ -1,0 +1,54 @@
+/* общий контейнер */
+.main-container {
+    margin-left: auto;
+    margin-right: auto;
+    min-width: 450px;
+    max-width: 900px;
+    height: 400px;
+    border: steelblue solid 2px;
+    background-color: aliceblue;
+}
+
+/* списки */
+.list-container {
+    display: flex;
+    justify-content: space-around;
+}
+
+.list {
+    width: 400px;
+    height: 300px;
+    margin-top: 30px;
+    margin-left: 10px;
+    margin-right: 10px;
+    border: steelblue solid 2px;
+    background-color: white;
+}
+
+li {
+    list-style: none;
+}
+
+/* раздел нижних кнопок */
+.button-container {
+    margin-left: 10px;
+    display: flex;
+    justify-content: left;
+}
+
+button {
+    margin-top: 10px;
+    margin-bottom: 20px;
+    border: steelblue solid 2px;
+    border-radius: 5px;
+    background-color: lightsteelblue;
+}
+
+.button-list{
+    margin-left: 15px;
+}
+
+.fetch {
+    align-self: center;
+    height: 20px;
+}
