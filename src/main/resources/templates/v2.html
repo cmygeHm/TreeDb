@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Title</title>
+    <link href="style.css" rel="stylesheet">
+</head>
+<script>
+    let selectedNode;
+
+    function selectNode(li) {
+        return function () {
+            if (selectedNode) {
+                selectedNode.classList.remove("list-element-click");
+            }
+            li.classList.add("list-element-click");
+            selectedNode = li;
+        };
+    }
+
+    function renderNode(data, parentElement) {
+        if (data) {
+            var ul = document.createElement("ul");
+            var li = document.createElement("li");
+            li.setAttribute("id", "node" + data.id);
+            li.setAttribute("data-id", data.id);
+            li.classList.add("list-element-base");
+            li.onclick = selectNode(li)
+            if (data.parentId !== null) {
+                li.setAttribute("data-parent-id", data.parentId);
+            }
+            li.appendChild(document.createTextNode(data.value));
+            ul.appendChild(li);
+            parentElement.appendChild(ul);
+            for (let i = 0; i < data.nodes.length; i++) {
+                renderNode(data.nodes[i], ul);
+            }
+        }
+    }
+
+    function loadOriginTree() {
+        fetch("/v2/tree/load-origin-tree",
+            {
+                method: "GET",
+                headers:{"content-type":"application/json"}
+            })
+            .then( response => {
+                return response.json();
+            })
+            .then( data => {
+                var div = document.getElementById("remote-tree");
+                div.innerHTML = "";
+                renderNode(data, div);
+            });
+    }
+    loadOriginTree();
+
+    function copyNode() {
+        let copyDiv = document.getElementById("local-tree");
+        if (selectedNode == null || selectedNode.classList.contains("list-element-copied")) {
+            return;
+        }
+        let id = parseInt(selectedNode.getAttribute("data-id"));
+        let postBody = {id: id, value: selectedNode.textContent, nodes: []}
+        if (selectedNode.getAttribute("data-parent-id") !== null) {
+            postBody.parentId = parseInt(selectedNode.getAttribute("data-parent-id"));
+        }
+
+        function processCopiedNode(copyResult) {
+            let childNodeId = copyResult.childNode.id;
+            let aloneElement = document.getElementById("local-node" + childNodeId);
+            if (aloneElement !== null) {
+                aloneElement.remove();
+            }
+            let copiedNode = document.getElementById("node" + childNodeId).cloneNode(true);
+            copiedNode.setAttribute("id", "local-" + copiedNode.getAttribute("id"))
+            copiedNode.classList.remove("list-element-click");
+            copiedNode.onclick = selectNode(copiedNode)
+            if (copyResult.parentNode === null) {
+                copyDiv.append(copiedNode);
+                copyDiv.appendChild(document.createElement("ul"));
+            } else {
+                if (document.querySelector("#local-node" + copyResult.parentNode.id).nextSibling === null) {
+                    document.querySelector("#local-node" + copyResult.parentNode.id).after(document.createElement("ul"));
+                }
+                document.querySelector("#local-node" + copyResult.parentNode.id).nextSibling.append(copiedNode);
+            }
+            selectedNode.classList.add("list-element-copied")
+        }
+
+        fetch("/v2/tree/node/copy",
+            {
+                method: "POST",
+                headers:{"content-type":"application/json"},
+                body: JSON.stringify(postBody)
+            })
+            .then( response => {
+                return response.json();
+            })
+            .then( data => {
+                for (let i = 0; i <data.length; i++) {
+                    processCopiedNode(data[i]);
+                }
+            });
+    }
+</script>
+<body>
+<div class="main-container">
+    <div class="list-container">
+        <div class="list" id="local-tree">
+        </div>
+        <button class="fetch" onclick="copyNode(); return false;"><<<</button>
+        <div class="list" id="remote-tree">
+        </div>
+    </div>
+    <div class="button-container">
+        <div>
+            <button>+</button>
+            <button>-</button>
+            <button>a</button>
+        </div>
+        <div class="button-list">
+            <button>Apply</button>
+            <button onclick="loadOriginTree(); return false;">Reset</button>
+        </div>
+    </div>
+</div>
+</body>
+</html>
