@@ -52,3 +52,21 @@ button {
     align-self: center;
     height: 20px;
 }
+
+.list-element-base {
+    cursor: pointer;
+    background-color: lightblue;
+    border: 1px solid cadetblue;
+    width: fit-content;
+    border-radius: 5px;
+    padding: 0 2px ;
+    margin: 2px 0;
+}
+
+.list-element-click {
+    background-color: lightskyblue;
+}
+
+.list-element-line {
+    text-decoration: line-through;
+}

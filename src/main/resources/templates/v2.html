@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Title</title>
+    <link href="style.css" rel="stylesheet">
+    <script src="script.js"></script>
+</head>
+<body>
+<div class="main-container">
+    <div class="list-container">
+        <div class="list" id="local-tree">
+        </div>
+        <button class="fetch" id="copyNodeButton"><<<</button>
+        <div class="list" id="remote-tree">
+        </div>
+    </div>
+    <div class="button-container">
+        <div>
+            <button>+</button>
+            <button>-</button>
+            <button>a</button>
+        </div>
+        <div class="button-list">
+            <button>Apply</button>
+            <button onclick="loadOriginTree(); return false;">Reset</button>
+        </div>
+    </div>
+</div>
+</body>
+</html>
