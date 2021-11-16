@@ -12,8 +12,6 @@ public class Node {
     private final Long id;
     @Nullable
     private Long parentId;
-    @Nonnull
-    private String materializedPath = "";
     @Nullable
     private final String value;
     @Nullable
@@ -26,7 +24,6 @@ public class Node {
             @Nullable Long parentId
     ) {
         this.id = requireNonNull(id, "id");
-//        this.materializedPath += this.id;
         this.value = value;
         this.nodes = nodes;
         this.parentId = parentId;
@@ -50,19 +47,12 @@ public class Node {
     @Nonnull
     public void setParentId(@Nonnull Long parentId) {
         this.parentId = parentId;
-        this.materializedPath = this.materializedPath + parentId + "." + id;
     }
 
     @Nullable
     public String getValue() {
         return value;
     }
-
-    @Nonnull
-    public String getMaterializedPath() {
-        return materializedPath;
-    }
-
     @Nullable
     public List<Node> getNodes() {
         return nodes;

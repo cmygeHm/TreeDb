@@ -2,22 +2,29 @@ package com.example.demo.variant2.controller;
 
 import com.example.demo.variant2.model.CopyResult;
 import com.example.demo.variant2.model.Node;
-import org.springframework.web.bind.annotation.*;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
 
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Iterator;
+import java.util.List;
+import java.util.Optional;
 
 @RestController
 @RequestMapping("/v2/tree")
 public class V2TreeController {
 
-    private HashMap<Long, Node> aloneNodes;
-    private Node root;
+    private List<Node> roots;
 
     @GetMapping("/load-origin-tree")
     public Node loadOriginTree() {
 
-        aloneNodes = new HashMap<>();
-        root = Node.builder()
+        roots = new ArrayList<>();
+        Node root = Node.builder()
                 .build();
 
         Node n6 = Node.builder().build();
@@ -42,33 +49,49 @@ public class V2TreeController {
 
     @PostMapping("/node/copy")
     public List<CopyResult> nodeCopy(@RequestBody Node nodeToCopy) {
+
         if (nodeToCopy.getParentId() == null) {
-            root = nodeToCopy;
+            roots.add(nodeToCopy);
             return Collections.singletonList(new CopyResult(nodeToCopy));
         }
-        var result = new ArrayList<CopyResult>(aloneNodes.size() + 1);
-        CopyResult copyResult = recursiveSearch(root, nodeToCopy);
-        result.add(copyResult);
-        for(Map.Entry<Long, Node> aloneNode: aloneNodes.entrySet()) {
-            CopyResult findResult = recursiveSearch(root, aloneNode.getValue());
-            if (findResult.getParentNode() != null) {
-                aloneNodes.remove(aloneNode.getKey());
+        var result = new ArrayList<CopyResult>();
+
+        CopyResult copyResult = null;
+        for (Node root : roots) {
+            copyResult = recursiveSearch(root, nodeToCopy);
+            if (copyResult.getParentNode() != null) {
+                result.add(copyResult);
+                break;
             }
-            result.add(findResult);
         }
-        if (copyResult.getParentNode() == null) {
-            aloneNodes.put(nodeToCopy.getId(), nodeToCopy);
+        if (copyResult != null && copyResult.getParentNode() == null) {
+            roots.add(nodeToCopy);
+            result.add(copyResult);
+        }
+
+        Iterator<Node> iterator = roots.iterator();
+        while (iterator.hasNext()) {
+            Node item = iterator.next();
+            if (nodeToCopy.getId().equals(item.getParentId())) {
+                nodeToCopy.addNode(item);
+                iterator.remove();
+            }
+        }
+
+        if (result.isEmpty()) {
+            roots.add(nodeToCopy);
+            return Collections.singletonList(new CopyResult(nodeToCopy));
         }
 
         return result;
     }
 
     private CopyResult recursiveSearch(Node currentTopNode, Node searchingNode) {
-        if (currentTopNode.getId() == searchingNode.getParentId()) {
+        if (currentTopNode.getId().equals(searchingNode.getParentId())) {
             currentTopNode.addNode(searchingNode);
             return new CopyResult(searchingNode, currentTopNode);
         }
-        Optional<Node> medium = currentTopNode.getNodes().stream().filter(i -> i.getId() == searchingNode.getParentId()).findFirst();
+        Optional<Node> medium = currentTopNode.getNodes().stream().filter(i -> i.getId().equals(searchingNode.getParentId())).findFirst();
         if (medium.isPresent()) {
             medium.get().addNode(searchingNode);
             return new CopyResult(searchingNode, medium.get());
