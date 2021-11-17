@@ -1,7 +1,16 @@
 document.addEventListener("DOMContentLoaded", ready)
 
 function ready() {
-    let selectedNode;
+    let selectedNode = null;
+
+    document.getElementById("resetButton").onclick = function () {
+        document.getElementById("local-tree").innerHTML = "";
+        loadOriginTree();
+    }
+
+    document.getElementById("applyButton").onclick = function () {
+        // applyTree();
+    }
 
     document.getElementById("copyNodeButton").onclick = function () {
         copyNode();
@@ -19,28 +28,27 @@ function ready() {
         renameNode();
     }
 
-    function selectNode(li) {
+    function selectNode() {
         return function () {
             if (selectedNode) {
-                selectedNode.classList.remove("list-element-click");
+                selectedNode.classList.remove("list-element-selected");
             }
-            li.classList.add("list-element-click");
-            selectedNode = li;
+            this.classList.add("list-element-selected");
+            selectedNode = this;
         };
     }
 
     function renderNode(data, parentElement) {
         if (data) {
-            var ul = document.createElement("ul");
-            var li = document.createElement("li");
-            li.setAttribute("id", "node" + data.id);
-            li.setAttribute("data-id", data.id);
-            li.classList.add("list-element-base");
-            li.onclick = selectNode(li)
+            let ul = document.createElement("ul");
+            let li = document.createElement("li");
+            li.dataset.id = data.id
+            li.classList.add("list-element-base", "remote");
+            li.onclick = selectNode()
             if (data.parentId !== null) {
-                li.setAttribute("data-parent-id", data.parentId);
+                li.dataset.parentId = data.parentId;
             }
-            li.appendChild(document.createTextNode(data.value));
+            li.textContent = data.value;
             ul.appendChild(li);
             parentElement.appendChild(ul);
             for (let i = 0; i < data.nodes.length; i++) {
@@ -64,6 +72,7 @@ function ready() {
                 renderNode(data, div);
             });
     }
+
     loadOriginTree();
 
     function copyNode() {
@@ -78,10 +87,10 @@ function ready() {
 
         function deepCopy(aloneElements) {
             for (let alone of aloneElements) {
-                if (document.querySelector("#local-node" + alone.dataset.parentId).nextSibling === null) {
-                    document.querySelector("#local-node" + alone.dataset.parentId).after(document.createElement("ul"));
+                if (document.querySelector('.local[data-id="' + alone.dataset.parentId + '"] ~ ul') == null) {
+                    document.querySelector('.local[data-id="' + alone.dataset.parentId + '"]').after(document.createElement("ul"));
                 }
-                document.querySelector("#local-node" + alone.dataset.parentId).nextSibling.append(alone);
+                document.querySelector('.local[data-id="' + alone.dataset.parentId + '"]').nextSibling.append(alone);
 
                 let aloneNodes = document.querySelectorAll('.local[data-parent-id="' + alone.dataset.id + '"]');
                 deepCopy(aloneNodes);
@@ -90,25 +99,24 @@ function ready() {
 
         function processCopiedNode(copyResult) {
             let childNodeId = copyResult.id;
-            let remoteToCopy = document.getElementById("node" + childNodeId);
+            let remoteToCopy = document.querySelector('.remote[data-id="' + childNodeId + '"]');
             remoteToCopy.classList.add("list-element-copied")
             let copiedNode = remoteToCopy.cloneNode(true);
-            copiedNode.setAttribute("id", "local-" + copiedNode.getAttribute("id"))
-            copiedNode.classList.remove("list-element-click");
+            copiedNode.classList.remove("list-element-selected");
             copiedNode.classList.add("local");
-            copiedNode.onclick = selectNode(copiedNode)
+            copiedNode.onclick = selectNode()
             if (
                 copyResult.parentId === null ||
-                document.querySelector("#local-node" + copyResult.parentId) === null
+                document.querySelector('.local[data-id="' + copyResult.parentId + '"]') == null
             ) {
                 let copyDiv = document.getElementById("local-tree");
                 copyDiv.append(copiedNode);
                 copyDiv.appendChild(document.createElement("ul"));
             } else {
-                if (document.querySelector("#local-node" + copyResult.parentId).nextSibling === null) {
-                    document.querySelector("#local-node" + copyResult.parentId).after(document.createElement("ul"));
+                if (document.querySelector('.local[data-id="' + copyResult.parentId + '"] ~ ul') == null) {
+                    document.querySelector('.local[data-id="' + copyResult.parentId + '"]').after(document.createElement("ul"));
                 }
-                document.querySelector("#local-node" + copyResult.parentId).nextSibling.append(copiedNode);
+                document.querySelector('.local[data-id="' + copyResult.parentId + '"]').nextSibling.append(copiedNode);
             }
             let aloneNodes = document.querySelectorAll('.local[data-parent-id="' + copiedNode.dataset.id + '"]');
             deepCopy(aloneNodes);
@@ -149,15 +157,20 @@ function ready() {
                 return response.json();
             })
             .then( data => {
-                document.querySelector("#local-node" + selectedNode.dataset.id).classList.add("list-element-deleted")
-                document.querySelectorAll("#local-node" + selectedNode.dataset.id + " ~ ul li.list-element-base").forEach(function(element){
-                    element.classList.add("list-element-deleted")
+                document.querySelector('.local[data-id="' + selectedNode.dataset.id + '"]').classList.add("list-element-deleted")
+                document.querySelectorAll('.local[data-id="' + selectedNode.dataset.id + '"] ~ ul:first-of-type li.list-element-base')
+                    .forEach(function(element){
+                        element.classList.add("list-element-deleted")
                 })
             });
     }
 
     function renameNode() {
         if (selectedNode === null) {
+            return false;
+        }
+        if (selectedNode.classList.contains("list-element-deleted")) {
+            alert("Нельзя добавить к удаленному элементу")
             return false;
         }
 
@@ -182,7 +195,7 @@ function ready() {
                 return response.json();
             })
             .then( data => {
-                document.querySelector("#local-node" + selectedNode.dataset.id).textContent = newNodeValue
+                document.querySelector('.local[data-id="' + selectedNode.dataset.id + '"]').textContent = newNodeValue
             });
     }
 
@@ -192,6 +205,10 @@ function ready() {
             !selectedNode.classList.contains("local")
         ) {
             alert("Выделите элемент локальной БД")
+            return false;
+        }
+        if (selectedNode.classList.contains("list-element-deleted")) {
+            alert("Нельзя добавить к удаленному элементу")
             return false;
         }
 
@@ -220,7 +237,7 @@ function ready() {
                 console.log(response)
             })
             .then( data => {
-                if (document.querySelector('.local[data-id="' + data.parentId + '"]').nextSibling == null) {
+                if (document.querySelector('.local[data-id="' + data.parentId + '"] ~ ul') == null) {
                     document.querySelector('.local[data-id="' + data.parentId + '"]').after(document.createElement("ul"));
                 }
                 let newElement = document.createElement("li")
@@ -228,8 +245,7 @@ function ready() {
                 newElement.dataset.id = data.id;
                 newElement.dataset.parentId = data.parentId;
                 newElement.classList.add("list-element-base", "list-element-copied", "local")
-                newElement.onclick = selectNode(newElement)
-                document.createElement("ul").dataset.parentId = data.parentId;
+                newElement.onclick = selectNode()
                 document.querySelector('.local[data-id="' + data.parentId + '"]').nextSibling.append(newElement);
             });
     }
