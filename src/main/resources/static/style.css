@@ -4,7 +4,6 @@
     margin-right: auto;
     min-width: 450px;
     max-width: 900px;
-    height: 400px;
     border: steelblue solid 2px;
     background-color: aliceblue;
 }
@@ -13,11 +12,11 @@
 .list-container {
     display: flex;
     justify-content: space-around;
+    align-content: flex-start;
 }
 
 .list {
     width: 400px;
-    height: 300px;
     margin-top: 30px;
     margin-left: 10px;
     margin-right: 10px;

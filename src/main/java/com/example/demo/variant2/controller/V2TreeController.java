@@ -6,7 +6,13 @@ import com.example.demo.variant2.model.Node;
 import com.example.demo.variant2.model.NodeDraft;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.*;
+import org.springframework.web.bind.annotation.DeleteMapping;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PatchMapping;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -18,15 +24,9 @@ import java.util.Optional;
 @RequestMapping("/v2/tree")
 public class V2TreeController {
 
-    private List<Node> roots;
+    private final Node sourceNode = buildSourceNode();
 
-    @GetMapping("/load-origin-tree")
-    public Node loadOriginTree() {
-
-        roots = new ArrayList<>();
-        Node root = Node.builder()
-                .build();
-
+    private Node buildSourceNode() {
         Node n6 = Node.builder().build();
         Node n7 = Node.builder().build();
         Node n5 = Node.builder().addChild(n6).addChild(n7).build();
@@ -42,9 +42,23 @@ public class V2TreeController {
                 .addChild(Node.builder().build())
                 .build();
 
-        root.addNode(node1);
-        root.addNode(node2);
-        return root;
+        return Node.builder()
+                .addChild(node1)
+                .addChild(node2)
+                .build();
+    }
+
+    private List<Node> roots;
+
+    @GetMapping("/load-origin-tree")
+    public Node loadOriginTree() {
+        roots = new ArrayList<>();
+        return sourceNode;
+    }
+
+    @PostMapping("/apply")
+    public Optional<Node> apply() {
+        return roots.stream().findFirst();
     }
 
     @PostMapping("/node/copy")
@@ -60,6 +74,9 @@ public class V2TreeController {
         for (Node root : roots) {
             copyResult = recursiveSearchAndAdd(root, nodeToCopy);
             if (copyResult.getParentNode() != null) {
+                if (copyResult.getParentNode().isDeleted()) {
+                    copyResult.getChildNode().markAsDeleted();
+                }
                 result.add(copyResult.getChildNode());
                 break;
             }

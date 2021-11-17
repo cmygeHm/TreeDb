@@ -9,7 +9,7 @@ function ready() {
     }
 
     document.getElementById("applyButton").onclick = function () {
-        // applyTree();
+        applyTree();
     }
 
     document.getElementById("copyNodeButton").onclick = function () {
@@ -21,7 +21,9 @@ function ready() {
     }
 
     document.getElementById("deleteNodeButton").onclick = function () {
-        deleteNode();
+        if (selectedNode) {
+            deleteNode(selectedNode);
+        }
     }
 
     document.getElementById("editNodeButton").onclick = function () {
@@ -44,6 +46,9 @@ function ready() {
             let li = document.createElement("li");
             li.dataset.id = data.id
             li.classList.add("list-element-base", "remote");
+            if (data.deleted) {
+                li.classList.add("list-element-deleted");
+            }
             li.onclick = selectNode()
             if (data.parentId !== null) {
                 li.dataset.parentId = data.parentId;
@@ -74,6 +79,22 @@ function ready() {
     }
 
     loadOriginTree();
+
+    function applyTree() {
+        fetch("/v2/tree/apply",
+            {
+                method: "POST",
+                headers:{"content-type":"application/json"}
+            })
+            .then( response => {
+                return response.json();
+            })
+            .then( data => {
+                var div = document.getElementById("remote-tree");
+                div.innerHTML = "";
+                renderNode(data, div);
+            });
+    }
 
     function copyNode() {
         if (selectedNode == null || selectedNode.classList.contains("list-element-copied")) {
@@ -120,6 +141,9 @@ function ready() {
             }
             let aloneNodes = document.querySelectorAll('.local[data-parent-id="' + copiedNode.dataset.id + '"]');
             deepCopy(aloneNodes);
+            if (copyResult.deleted) {
+                deleteNode(copiedNode)
+            }
         }
 
         fetch("/v2/tree/node/copy",
@@ -138,7 +162,7 @@ function ready() {
             });
     }
 
-    function deleteNode() {
+    function deleteNode(selectedNode) {
         if (selectedNode === null) {
             return false;
         }
@@ -159,9 +183,9 @@ function ready() {
             .then( data => {
                 document.querySelector('.local[data-id="' + selectedNode.dataset.id + '"]').classList.add("list-element-deleted")
                 document.querySelectorAll('.local[data-id="' + selectedNode.dataset.id + '"] ~ ul:first-of-type li.list-element-base')
-                    .forEach(function(element){
+                    .forEach(function (element) {
                         element.classList.add("list-element-deleted")
-                })
+                    })
             });
     }
 
