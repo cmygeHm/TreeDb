@@ -14,7 +14,7 @@ public class Node {
     private Long parentId;
     @Nullable
     private String value;
-    @Nullable
+    @Nonnull
     private final List<Node> nodes;
     @Nonnull
     private boolean isDeleted = false;
@@ -22,7 +22,7 @@ public class Node {
     public Node(
             @Nonnull Long id,
             @Nullable String value,
-            @Nullable List<Node> nodes,
+            @Nonnull List<Node> nodes,
             @Nullable Long parentId
     ) {
         this.id = requireNonNull(id, "id");
@@ -55,7 +55,7 @@ public class Node {
     public String getValue() {
         return value;
     }
-    @Nullable
+    @Nonnull
     public List<Node> getNodes() {
         return nodes;
     }
@@ -67,6 +67,10 @@ public class Node {
 
     public boolean isDeleted() {
         return isDeleted;
+    }
+
+    public void setDeleted(boolean isDeleted) {
+        this.isDeleted = isDeleted;
     }
 
     public void markAsDeleted() {
