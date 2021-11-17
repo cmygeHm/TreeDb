@@ -67,6 +67,6 @@ button {
     background-color: lightskyblue;
 }
 
-.list-element-line {
+.list-element-deleted {
     text-decoration: line-through;
 }

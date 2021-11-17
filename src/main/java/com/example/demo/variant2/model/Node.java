@@ -13,9 +13,11 @@ public class Node {
     @Nullable
     private Long parentId;
     @Nullable
-    private final String value;
+    private String value;
     @Nullable
     private final List<Node> nodes;
+    @Nonnull
+    private boolean isDeleted = false;
 
     public Node(
             @Nonnull Long id,
@@ -58,6 +60,25 @@ public class Node {
         return nodes;
     }
 
+    public void addNode(Node node) {
+        node.setParentId(id);
+        this.nodes.add(node);
+    }
+
+    public boolean isDeleted() {
+        return isDeleted;
+    }
+
+    public void markAsDeleted() {
+        isDeleted = true;
+        if (nodes == null) {
+            return;
+        }
+        for(Node node : nodes) {
+            node.markAsDeleted();
+        }
+    }
+
     @Override
     public String toString() {
         return "Node{" +
@@ -68,13 +89,13 @@ public class Node {
                 '}';
     }
 
-    public void addNode(Node node) {
-        node.setParentId(id);
-        this.nodes.add(node);
+    public void setValue(String value) {
+        this.value = value;
     }
 
     public static final class Builder {
-        private final Long id;
+        private Long id;
+        private Long parentId;
         private String value;
         private final List<Node> nodes;
 
@@ -83,8 +104,18 @@ public class Node {
             nodes = new ArrayList<>();
         }
 
-        public Builder withValue(@Nonnull String value) {
+        public Builder withId(@Nonnull Long id) {
+            this.id = id;
+            return this;
+        }
+
+        public Builder withValue(@Nullable String value) {
             this.value = value;
+            return this;
+        }
+
+        public Builder withParentId(Long parentId) {
+            this.parentId = parentId;
             return this;
         }
 
@@ -99,7 +130,7 @@ public class Node {
             if (value == null) {
                 value = "node" + id;
             }
-            return new Node(id, value, nodes, null);
+            return new Node(id, value, nodes, parentId);
         }
     }
 }
