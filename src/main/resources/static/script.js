@@ -131,7 +131,9 @@ function ready() {
                 document.querySelector('.local[data-id="' + copyResult.parentId + '"]') == null
             ) {
                 let copyDiv = document.getElementById("local-tree");
-                copyDiv.append(copiedNode);
+                let ul = document.createElement("ul");
+                ul.append(copiedNode);
+                copyDiv.appendChild(ul);
                 copyDiv.appendChild(document.createElement("ul"));
             } else {
                 if (document.querySelector('.local[data-id="' + copyResult.parentId + '"] ~ ul') == null) {
