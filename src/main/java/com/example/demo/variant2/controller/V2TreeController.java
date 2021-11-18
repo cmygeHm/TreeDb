@@ -1,7 +1,6 @@
 package com.example.demo.variant2.controller;
 
 import com.example.demo.variant2.model.ApiError;
-import com.example.demo.variant2.model.CopyResult;
 import com.example.demo.variant2.model.IdGenerator;
 import com.example.demo.variant2.model.Node;
 import com.example.demo.variant2.model.NodeDraft;
@@ -21,7 +20,6 @@ import java.util.*;
 @RequestMapping("/v2/tree")
 public class V2TreeController {
 
-    private List<Node> roots;
     private Map<Long, Node> localCache;
     private Map<Long, Map<Long, Node>> localCacheForNewNodes;
     private Node sourceNode = buildSourceNode();
@@ -50,7 +48,6 @@ public class V2TreeController {
 
     @GetMapping("/load-origin-tree")
     public Node loadOriginTree() {
-        roots = new ArrayList<>();
         localCache = new HashMap<>();
         localCacheForNewNodes = new HashMap<>();
         sourceNode = buildSourceNode();
@@ -88,48 +85,6 @@ public class V2TreeController {
     }
 
     @PostMapping("/node/copy")
-    public List<Node> nodeCopy(@RequestBody Node nodeToCopy) {
-
-        if (nodeToCopy.getParentId() == null) {
-            roots.add(nodeToCopy);
-            return Collections.singletonList(nodeToCopy);
-        }
-        var result = new ArrayList<Node>();
-
-        CopyResult copyResult = null;
-        for (Node root : roots) {
-            copyResult = recursiveSearchAndAdd(root, nodeToCopy);
-            if (copyResult.getParentNode() != null) {
-                if (copyResult.getParentNode().isDeleted()) {
-                    copyResult.getChildNode().markAsDeleted();
-                }
-                result.add(copyResult.getChildNode());
-                break;
-            }
-        }
-        if (copyResult != null && copyResult.getParentNode() == null) {
-            roots.add(nodeToCopy);
-            result.add(copyResult.getChildNode());
-        }
-
-        Iterator<Node> iterator = roots.iterator();
-        while (iterator.hasNext()) {
-            Node item = iterator.next();
-            if (nodeToCopy.getId().equals(item.getParentId())) {
-                nodeToCopy.addNode(item);
-                iterator.remove();
-            }
-        }
-
-        if (result.isEmpty()) {
-            roots.add(nodeToCopy);
-            return Collections.singletonList(nodeToCopy);
-        }
-
-        return result;
-    }
-
-    @PostMapping("/node/copy/v2")
     public List<Node> nodeCopyV2(@RequestBody Node nodeToCopy) {
 
         localCache.put(nodeToCopy.getId(), nodeToCopy);
@@ -139,29 +94,13 @@ public class V2TreeController {
 
     @DeleteMapping("/node")
     public Optional<Node> delete(@RequestBody Node nodeToDelete) {
-//        Optional<Node> searchResult = Optional.empty();
-//        for (Node root : roots) {
-//            searchResult = recursiveSearch(root, nodeToDelete);
-//            if (searchResult.isPresent()) {
-//                searchResult.get().markAsDeleted();
-//                break;
-//            }
-//        }
-        localCache.get(nodeToDelete.getId()).markAsDeleted();
+        localCache.get(nodeToDelete.getId()).setDeleted(true);
 
         return Optional.empty();
     }
 
     @PatchMapping("/node")
     public Optional<Node> patchNodeValue(@RequestBody Node nodeToPatch) {
-//        Optional<Node> searchResult = Optional.empty();
-//        for (Node root : roots) {
-//            searchResult = recursiveSearch(root, nodeToPatch);
-//            if (searchResult.isPresent()) {
-//                searchResult.get().setValue(nodeToPatch.getValue());
-//                break;
-//            }
-//        }
 
         localCache.get(nodeToPatch.getId()).setValue(nodeToPatch.getValue());
 
@@ -184,73 +123,6 @@ public class V2TreeController {
         localCacheForNewNodes.putIfAbsent(newNode.getParentId(), new HashMap<>());
         localCacheForNewNodes.get(newNode.getParentId()).put(newNode.getId(), newNode);
 
-//        Optional<Node> searchResult = Optional.empty();
-//        Node newNode = null;
-//        for (Node root : roots) {
-//            searchResult = recursiveSearch(root, Node.builder().withId(nodeToCreate.getParentId()).build());
-//            if (searchResult.isPresent()) {
-//                newNode = Node.builder()
-//                        .withValue(nodeToCreate.getValue())
-//                        .withParentId(searchResult.get().getId())
-//                        .build();
-//                searchResult.get().addNode(newNode);
-//                break;
-//            }
-//        }
-//
-//        if (newNode == null) {
-//            return new ResponseEntity(
-//                    Optional.of(new ApiError("unknown error")),
-//                    HttpStatus.INTERNAL_SERVER_ERROR
-//            );
-//        }
-
         return new ResponseEntity(Optional.of(newNode), HttpStatus.OK);
-    }
-
-    private CopyResult recursiveSearchAndAdd(Node currentTopNode, Node searchingNode) {
-        if (currentTopNode.getId().equals(searchingNode.getParentId())) {
-            currentTopNode.addNode(searchingNode);
-            return new CopyResult(searchingNode, currentTopNode);
-        }
-        Optional<Node> medium = currentTopNode.getNodes().stream().filter(i -> i.getId().equals(searchingNode.getParentId())).findFirst();
-        if (medium.isPresent()) {
-            medium.get().addNode(searchingNode);
-            return new CopyResult(searchingNode, medium.get());
-        } else {
-            for (Node childNode : currentTopNode.getNodes()) {
-                var copyResult = recursiveSearchAndAdd(childNode, searchingNode);
-                if (copyResult.getParentNode() != null) {
-                    return copyResult;
-                }
-            }
-        }
-
-        return new CopyResult(searchingNode);
-    }
-
-    private Optional<Node> recursiveSearch(Node currentTopNode, Node searchingNode) {
-        if (currentTopNode.getId().equals(searchingNode.getId())) {
-            return Optional.of(currentTopNode);
-        }
-        if (currentTopNode.getNodes() == null || currentTopNode.getNodes().isEmpty()) {
-            return Optional.empty();
-        }
-        Optional<Node> medium = currentTopNode.getNodes()
-                .stream()
-                .filter(i -> i.getId().equals(searchingNode.getId()) && !i.isDeleted())
-                .findFirst();
-        if (medium.isPresent()) {
-            return medium;
-        } else {
-            for (Node childNode : currentTopNode.getNodes()) {
-                Optional<Node> searchResult = recursiveSearch(childNode, searchingNode);
-                if (searchResult.isPresent()) {
-                    return searchResult;
-                }
-            }
-        }
-
-        return Optional.empty();
     }
 }

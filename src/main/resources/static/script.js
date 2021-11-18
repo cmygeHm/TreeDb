@@ -40,7 +40,7 @@ function ready() {
         };
     }
 
-    function renderNode(data, parentElement) {
+    function renderNode(data, parentElement, parents) {
         if (data) {
             let ul = document.createElement("ul");
             let li = document.createElement("li");
@@ -53,11 +53,16 @@ function ready() {
             if (data.parentId !== null) {
                 li.dataset.parentId = data.parentId;
             }
+            if (parents == null) {
+                li.dataset.parents = data.id;
+            } else {
+                li.dataset.parents = parents + " " + data.id;
+            }
             li.textContent = data.value;
             ul.appendChild(li);
             parentElement.appendChild(ul);
             for (let i = 0; i < data.nodes.length; i++) {
-                renderNode(data.nodes[i], ul);
+                renderNode(data.nodes[i], ul, li.dataset.parents);
             }
         }
     }
@@ -131,7 +136,7 @@ function ready() {
             let childNodeId = copyResult.id;
             let remoteToCopy = document.querySelector('.remote[data-id="' + childNodeId + '"]');
             let copiedNode = remoteToCopy.cloneNode(true);
-            copiedNode.classList.remove("list-element-selected");
+            copiedNode.classList.remove("list-element-selected", "remote");
             copiedNode.classList.add("local");
             copiedNode.onclick = selectNode()
             if (
@@ -156,7 +161,7 @@ function ready() {
             }
         }
 
-        fetch("/v2/tree/node/copy/v2",
+        fetch("/v2/tree/node/copy",
             {
                 method: "POST",
                 headers:{"content-type":"application/json"},
@@ -192,7 +197,7 @@ function ready() {
             })
             .then( data => {
                 document.querySelector('.local[data-id="' + selectedNode.dataset.id + '"]').classList.add("list-element-deleted")
-                document.querySelectorAll('.local[data-parent-id="' + selectedNode.dataset.id + '"]')
+                document.querySelectorAll('.local[data-parents~="' + selectedNode.dataset.id + '"]')
                     .forEach(function (element) {
                         element.classList.add("list-element-deleted")
                     })
