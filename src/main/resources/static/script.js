@@ -196,7 +196,6 @@ function ready() {
                 return true;
             })
             .then( data => {
-                document.querySelector('.local[data-id="' + selectedNode.dataset.id + '"]').classList.add("list-element-deleted")
                 document.querySelectorAll('.local[data-parents~="' + selectedNode.dataset.id + '"]')
                     .forEach(function (element) {
                         element.classList.add("list-element-deleted")
