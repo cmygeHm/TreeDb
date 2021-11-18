@@ -12,4 +12,4 @@ docker run -it -p80:8080 docker.io/library/artur-demo
 
 ## Use it
 
-http://localhost:80/v2
+[http://localhost:80/]()

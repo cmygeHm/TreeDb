@@ -4,108 +4,26 @@
     <meta charset="UTF-8">
     <title>Title</title>
     <link href="style.css" rel="stylesheet">
+    <script src="script.js"></script>
 </head>
-<script>
-    function renderNode(data, parentElement) {
-        if (data) {
-            var ul = document.createElement("ul");
-            var li = document.createElement("li");
-            li.setAttribute("id", "node" + data.id);
-            li.setAttribute("data-id", data.id);
-            if (data.parentId !== null) {
-                li.setAttribute("data-parent-id", data.parentId);
-            }
-            li.appendChild(document.createTextNode(data.value));
-            ul.appendChild(li);
-            parentElement.appendChild(ul);
-            for (let i = 0; i < data.nodes.length; i++) {
-                renderNode(data.nodes[i], ul);
-            }
-        }
-    }
-
-    function loadOriginTree() {
-        fetch("/tree/load-origin-tree",
-            {
-                method: "GET",
-                headers:{"content-type":"application/json"}
-            })
-            .then( response => {
-                return response.json();
-            })
-            .then( data => {
-                var div = document.getElementById("remote-tree");
-                div.innerHTML = "";
-                renderNode(data, div);
-            });
-    }
-    loadOriginTree();
-
-    function copyRootNode() {
-        let copyDiv = document.getElementById("local-tree");
-        copyDiv.innerHTML = "";
-        let copy = document.getElementById(document.getElementById("copyId").value);
-
-        let id = parseInt(copy.getAttribute("data-id"));
-        let postBody = {id: id, value: copy.textContent, nodes: []}
-        if (copy.getAttribute("data-parent-id") !== null) {
-            postBody.parentId = parseInt(copy.getAttribute("data-parent-id"));
-        }
-        let nodes = document.querySelectorAll('li[data-parent-id="' + id + '"]');
-        for (let i = 0; i < nodes.length; i++) {
-            postBody.nodes.push({
-                id: parseInt(nodes[i].getAttribute("data-id"))
-            });
-        }
-        fetch("/tree/node/copy",
-            {
-                method: "POST",
-                headers:{"content-type":"application/json"},
-                body: JSON.stringify(postBody)
-            })
-            .then( response => {
-                return response.json();
-            })
-            .then( data => {
-                copyDiv.append(copy.cloneNode(true));
-            });
-    }
-</script>
 <body>
-<input type="text" id="copyId" value="node"/>
-<button onclick="copyRootNode(); return false;">Copy root node</button>
-
 <div class="main-container">
     <div class="list-container">
         <div class="list" id="local-tree">
         </div>
-        <button class="fetch"><<<</button>
+        <button class="fetch" id="copyNodeButton"><<<</button>
         <div class="list" id="remote-tree">
-            <ul>
-                <li>Node1</li>
-                <ul>
-                    <li>Node2</li>
-                    <li>Node3</li>
-                    <ul>
-                        <li>Node4</li>
-                    </ul>
-                    <li>Node5</li>
-                    <ul>
-                        <li>Node6</li>
-                    </ul>
-                </ul>
-            </ul>
         </div>
     </div>
     <div class="button-container">
         <div>
-            <button>+</button>
-            <button>-</button>
-            <button>a</button>
+            <button id="addNodeButton">+</button>
+            <button id="deleteNodeButton">-</button>
+            <button id="editNodeButton">edit</button>
         </div>
         <div class="button-list">
-            <button>Apply</button>
-            <button onclick="loadOriginTree(); return false;">Reset</button>
+            <button id="applyButton">Apply</button>
+            <button id="resetButton">Reset</button>
         </div>
     </div>
 </div>

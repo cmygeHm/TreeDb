@@ -5,4 +5,8 @@ public class IdGenerator {
     public static Long getId() {
         return id++;
     }
+
+    public static void reset() {
+        id = 0L;
+    }
 }

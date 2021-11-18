@@ -1,4 +1,4 @@
-package com.example.demo.variant2.model;
+package com.example.demo.model;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;

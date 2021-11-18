@@ -104,7 +104,8 @@ function ready() {
     function copyNode() {
         if (
             selectedNode == null ||
-            selectedNode.classList.contains("local")
+            selectedNode.classList.contains("local") ||
+            selectedNode.classList.contains("list-element-deleted")
         ) {
             return;
         }
@@ -282,6 +283,7 @@ function ready() {
                 newElement.textContent = data.value;
                 newElement.dataset.id = data.id;
                 newElement.dataset.parentId = data.parentId;
+                newElement.dataset.parents = [selectedNode.dataset.parents, data.id].join(" ");
                 newElement.classList.add("list-element-base", "local")
                 newElement.onclick = selectNode()
                 document.querySelector('.local[data-id="' + data.parentId + '"] + ul').append(newElement);

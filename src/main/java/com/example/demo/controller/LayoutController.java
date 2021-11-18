@@ -5,8 +5,8 @@ import org.springframework.web.bind.annotation.RequestMapping;
 
 @Controller
 public class LayoutController {
-    @RequestMapping("/v2")
+    @RequestMapping("/")
     public String getIndexPage() {
-        return "v2.html";
+        return "index.html";
     }
 }
