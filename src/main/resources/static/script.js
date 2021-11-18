@@ -116,6 +116,16 @@ function ready() {
             return;
         }
 
+        let parentIds = selectedNode.dataset.parents.split(" ")
+        for (let i = 0; i < parentIds.length; i++) {
+            let parentId = parentIds[i];
+            let deletedParent = document.querySelector('.local[data-id="' + parentId + '"].list-element-deleted')
+            if (deletedParent != null) {
+                alert("Нельзя загружать ноду, родитель которой удален в локальном кеше")
+                return;
+            }
+        }
+
         let postBody = {id: id, value: selectedNode.textContent, nodes: []}
         if (selectedNode.dataset.parentId !== null) {
             postBody.parentId = parseInt(selectedNode.dataset.parentId);
