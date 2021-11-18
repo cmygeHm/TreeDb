@@ -1,32 +1,30 @@
 package com.example.demo.variant2.controller;
 
-import com.example.demo.variant2.model.CopyResult;
+import com.example.demo.variant2.model.ApiError;
+import com.example.demo.variant2.model.IdGenerator;
 import com.example.demo.variant2.model.Node;
+import com.example.demo.variant2.model.NodeDraft;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.Iterator;
-import java.util.List;
-import java.util.Optional;
+import java.util.*;
 
 @RestController
 @RequestMapping("/v2/tree")
 public class V2TreeController {
 
-    private List<Node> roots;
+    private Map<Long, Node> localCache;
+    private Map<Long, Map<Long, Node>> localCacheForNewNodes;
+    private Node sourceNode = buildSourceNode();
 
-    @GetMapping("/load-origin-tree")
-    public Node loadOriginTree() {
-
-        roots = new ArrayList<>();
-        Node root = Node.builder()
-                .build();
-
+    private Node buildSourceNode() {
         Node n6 = Node.builder().build();
         Node n7 = Node.builder().build();
         Node n5 = Node.builder().addChild(n6).addChild(n7).build();
@@ -42,68 +40,89 @@ public class V2TreeController {
                 .addChild(Node.builder().build())
                 .build();
 
-        root.addNode(node1);
-        root.addNode(node2);
-        return root;
+        return Node.builder()
+                .addChild(node1)
+                .addChild(node2)
+                .build();
+    }
+
+    @GetMapping("/load-origin-tree")
+    public Node loadOriginTree() {
+        localCache = new HashMap<>();
+        localCacheForNewNodes = new HashMap<>();
+        sourceNode = buildSourceNode();
+        return sourceNode;
+    }
+
+    @PostMapping("/apply")
+    public Optional<Node> apply() {
+        Node result = sourceNode;
+        recursiveApply(result);
+        return Optional.of(result);
+    }
+
+    private void recursiveApply(Node dataBaseNode) {
+        if (localCache.containsKey(dataBaseNode.getId())) {
+            Node cachedNode = localCache.get(dataBaseNode.getId());
+            dataBaseNode.setValue(cachedNode.getValue());
+            if (cachedNode.isDeleted()) {
+                dataBaseNode.setDeleted(cachedNode.isDeleted());
+            }
+        }
+        if (localCacheForNewNodes.containsKey(dataBaseNode.getId())) {
+            for (Map.Entry<Long, Node> e : localCacheForNewNodes.get(dataBaseNode.getId()).entrySet()) {
+                dataBaseNode.addNode(e.getValue());
+            }
+
+            localCacheForNewNodes.remove(dataBaseNode.getId());
+        }
+        for (Node child : dataBaseNode.getNodes()) {
+            if (dataBaseNode.isDeleted()) {
+                child.setDeleted(dataBaseNode.isDeleted());
+            }
+            recursiveApply(child);
+        }
     }
 
     @PostMapping("/node/copy")
-    public List<CopyResult> nodeCopy(@RequestBody Node nodeToCopy) {
+    public List<Node> nodeCopyV2(@RequestBody Node nodeToCopy) {
 
-        if (nodeToCopy.getParentId() == null) {
-            roots.add(nodeToCopy);
-            return Collections.singletonList(new CopyResult(nodeToCopy));
-        }
-        var result = new ArrayList<CopyResult>();
+        localCache.put(nodeToCopy.getId(), nodeToCopy);
 
-        CopyResult copyResult = null;
-        for (Node root : roots) {
-            copyResult = recursiveSearch(root, nodeToCopy);
-            if (copyResult.getParentNode() != null) {
-                result.add(copyResult);
-                break;
-            }
-        }
-        if (copyResult != null && copyResult.getParentNode() == null) {
-            roots.add(nodeToCopy);
-            result.add(copyResult);
-        }
-
-        Iterator<Node> iterator = roots.iterator();
-        while (iterator.hasNext()) {
-            Node item = iterator.next();
-            if (nodeToCopy.getId().equals(item.getParentId())) {
-                nodeToCopy.addNode(item);
-                iterator.remove();
-            }
-        }
-
-        if (result.isEmpty()) {
-            roots.add(nodeToCopy);
-            return Collections.singletonList(new CopyResult(nodeToCopy));
-        }
-
-        return result;
+        return Collections.singletonList(nodeToCopy);
     }
 
-    private CopyResult recursiveSearch(Node currentTopNode, Node searchingNode) {
-        if (currentTopNode.getId().equals(searchingNode.getParentId())) {
-            currentTopNode.addNode(searchingNode);
-            return new CopyResult(searchingNode, currentTopNode);
-        }
-        Optional<Node> medium = currentTopNode.getNodes().stream().filter(i -> i.getId().equals(searchingNode.getParentId())).findFirst();
-        if (medium.isPresent()) {
-            medium.get().addNode(searchingNode);
-            return new CopyResult(searchingNode, medium.get());
-        } else {
-            for (Node childNode : currentTopNode.getNodes()) {
-                var copyResult = recursiveSearch(childNode, searchingNode);
-                if (copyResult.getParentNode() != null) {
-                    return copyResult;
-                }
-            }
-        }
+    @DeleteMapping("/node")
+    public Optional<Node> delete(@RequestBody Node nodeToDelete) {
+        localCache.get(nodeToDelete.getId()).setDeleted(true);
 
-        return new CopyResult(searchingNode);
+        return Optional.empty();
+    }
+
+    @PatchMapping("/node")
+    public Optional<Node> patchNodeValue(@RequestBody Node nodeToPatch) {
+
+        localCache.get(nodeToPatch.getId()).setValue(nodeToPatch.getValue());
+
+        return Optional.empty();
+    }
+
+    @PostMapping("/node")
+    public ResponseEntity<Optional<Node>> createNewNode(@RequestBody NodeDraft nodeToCreate) {
+        if (nodeToCreate.getParentId() == null) {
+            return new ResponseEntity(
+                    Optional.of(new ApiError("parentId required for create new node")),
+                    HttpStatus.BAD_REQUEST
+            );
+        }
+        Node newNode = Node.builder()
+                .withId(IdGenerator.getId())
+                .withParentId(nodeToCreate.getParentId())
+                .withValue(nodeToCreate.getValue())
+                .build();
+        localCacheForNewNodes.putIfAbsent(newNode.getParentId(), new HashMap<>());
+        localCacheForNewNodes.get(newNode.getParentId()).put(newNode.getId(), newNode);
+
+        return new ResponseEntity(Optional.of(newNode), HttpStatus.OK);
     }
 }
