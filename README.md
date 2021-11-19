@@ -6,7 +6,7 @@
 
 Run next commands in the project root
 ```
-docker build --tag=artur-demo .
+docker build . -t artur-demo --no-cache --progress=plain
 docker run -it -p80:8080 docker.io/library/artur-demo
 ```
 
