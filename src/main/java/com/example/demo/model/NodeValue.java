@@ -1,17 +1,13 @@
 package com.example.demo.model;
 
-import javax.annotation.Nullable;
+import javax.annotation.Nonnull;
 
 public class NodeValue {
-    @Nullable
+    @Nonnull
     private String value;
 
-    @Nullable
+    @Nonnull
     public String getValue() {
         return value;
-    }
-
-    public void setValue(@Nullable String value) {
-        this.value = value;
     }
 }

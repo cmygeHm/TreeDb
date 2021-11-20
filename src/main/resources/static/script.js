@@ -66,6 +66,7 @@ function ready() {
     }
 
     function loadOriginTree() {
+        selectedNode = null
         fetch("/tree/load-origin-tree",
             {
                 method: "GET",
@@ -142,6 +143,11 @@ function ready() {
             return false;
         }
 
+        if (selectedNode.classList.contains("remote")) {
+            alert("Скопируйте элемент в локальный кеш, чтобы работать с ним")
+            return false;
+        }
+
         fetch(`/tree/node/${selectedNode.dataset.id}`,
             {
                 method: "DELETE",
@@ -156,11 +162,13 @@ function ready() {
     }
 
     function renameNode() {
-        if (
-            selectedNode === null // ||
-            // selectedNode.classList.contains("remote")
-        ) {
+        if (selectedNode === null) {
             alert("Выберите элемент для редактирования")
+            return false;
+        }
+
+        if (selectedNode.classList.contains("remote")) {
+            alert("Скопируйте элемент в локальный кеш, чтобы работать с ним")
             return false;
         }
 
@@ -186,7 +194,8 @@ function ready() {
 
     function addNode() {
         if (
-            selectedNode == null
+            selectedNode == null ||
+            selectedNode.classList.contains("remote")
         ) {
             alert("Выделите элемент локальной БД")
             return false;

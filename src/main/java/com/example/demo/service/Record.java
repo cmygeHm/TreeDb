@@ -12,9 +12,9 @@ public class Record {
     @Nonnull
     private final Long parentId;
     @Nonnull
-    private String value;
+    private final String value;
     @Nonnull
-    private Boolean isDeleted;
+    private final Boolean isDeleted;
     @Nonnull
     private final Set<Long> parentIds;
 
@@ -51,17 +51,9 @@ public class Record {
         return value;
     }
 
-    public void setValue(@Nonnull String value) {
-        this.value = requireNonNull(value, "value");;
-    }
-
     @Nonnull
     public Boolean isDeleted() {
         return isDeleted;
-    }
-
-    public void markAsDeleted() {
-        isDeleted = true;
     }
 
     @Nonnull
