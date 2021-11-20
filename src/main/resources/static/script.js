@@ -214,14 +214,9 @@ function ready() {
                 body: JSON.stringify({value: newNodeValue})
             })
             .then( response => {
-                    return response.json();
+                return response.json();
             })
             .then( data => {
-                if (data.error) {
-                    alert(data.error)
-                    return
-                }
-
                 renderLocalTree(data)
             });
     }
