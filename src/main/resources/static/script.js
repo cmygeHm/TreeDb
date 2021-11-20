@@ -40,35 +40,33 @@ function ready() {
         };
     }
 
-    function renderNode(data, parentElement, parents) {
+    function renderNode(data, parentElement, isRemoteTree) {
         if (data) {
             let ul = document.createElement("ul");
             let li = document.createElement("li");
             li.dataset.id = data.id
-            li.classList.add("list-element-base", "remote");
+            if (isRemoteTree) {
+                li.classList.add("remote");
+            } else {
+                li.classList.remove("remote");
+                li.classList.add("local");
+            }
+            li.classList.add("list-element-base");
             if (data.deleted) {
                 li.classList.add("list-element-deleted");
             }
             li.onclick = selectNode()
-            if (data.parentId !== null) {
-                li.dataset.parentId = data.parentId;
-            }
-            if (parents == null) {
-                li.dataset.parents = data.id;
-            } else {
-                li.dataset.parents = parents + " " + data.id;
-            }
             li.textContent = data.value;
             ul.appendChild(li);
             parentElement.appendChild(ul);
-            for (let i = 0; i < data.nodes.length; i++) {
-                renderNode(data.nodes[i], ul, li.dataset.parents);
+            for (let i = 0; i < data.childNodes.length; i++) {
+                renderNode(data.childNodes[i], ul, isRemoteTree);
             }
         }
     }
 
     function loadOriginTree() {
-        fetch("/v2/tree/load-origin-tree",
+        fetch("/tree/load-origin-tree",
             {
                 method: "GET",
                 headers:{"content-type":"application/json"}
@@ -77,16 +75,18 @@ function ready() {
                 return response.json();
             })
             .then( data => {
-                var div = document.getElementById("remote-tree");
+                let div = document.getElementById("remote-tree");
                 div.innerHTML = "";
-                renderNode(data, div);
+                for (let i = 0; i < data.length; i++) {
+                    renderNode(data[i], div, true);
+                }
             });
     }
 
     loadOriginTree();
 
     function applyTree() {
-        fetch("/v2/tree/apply",
+        fetch("/tree/apply",
             {
                 method: "POST",
                 headers:{"content-type":"application/json"}
@@ -95,131 +95,72 @@ function ready() {
                 return response.json();
             })
             .then( data => {
-                var div = document.getElementById("remote-tree");
+                let div = document.getElementById("remote-tree");
                 div.innerHTML = "";
-                renderNode(data, div);
+                for (let i = 0; i < data.length; i++) {
+                    renderNode(data[i], div, true);
+                }
             });
+    }
+
+    function renderLocalTree(data) {
+        if (data.error) {
+            alert(data.error);
+            return false
+        }
+        let div = document.getElementById("local-tree");
+        div.innerHTML = "";
+        for (let i = 0; i < data.length; i++) {
+            renderNode(data[i], div, false);
+        }
     }
 
     function copyNode() {
         if (
-            selectedNode == null ||
-            selectedNode.classList.contains("local") ||
-            selectedNode.classList.contains("list-element-deleted")
+            selectedNode == null
         ) {
+            alert("Выберите ноду для копирования")
             return;
         }
 
-        let id = parseInt(selectedNode.dataset.id);
-        if (document.querySelector('.local[data-id="' + id + '"]')) {
-            console.log("already cached")
-            return;
-        }
-
-        let parentIds = selectedNode.dataset.parents.split(" ")
-        for (let i = 0; i < parentIds.length; i++) {
-            let parentId = parentIds[i];
-            let deletedParent = document.querySelector('.local[data-id="' + parentId + '"].list-element-deleted')
-            if (deletedParent != null) {
-                alert("Нельзя загружать ноду, родитель которой удален в локальном кеше")
-                return;
-            }
-        }
-
-        let postBody = {id: id, value: selectedNode.textContent, nodes: []}
-        if (selectedNode.dataset.parentId !== null) {
-            postBody.parentId = parseInt(selectedNode.dataset.parentId);
-        }
-
-        function deepCopy(aloneElements) {
-            for (let alone of aloneElements) {
-                if (document.querySelector('.local[data-id="' + alone.dataset.parentId + '"] ~ ul') == null) {
-                    document.querySelector('.local[data-id="' + alone.dataset.parentId + '"]').after(document.createElement("ul"));
-                }
-                document.querySelector('.local[data-id="' + alone.dataset.parentId + '"]').nextSibling.append(alone);
-
-                let aloneNodes = document.querySelectorAll('.local[data-parent-id="' + alone.dataset.id + '"]');
-                deepCopy(aloneNodes);
-            }
-        }
-
-        function processCopiedNode(copyResult) {
-            let childNodeId = copyResult.id;
-            let remoteToCopy = document.querySelector('.remote[data-id="' + childNodeId + '"]');
-            let copiedNode = remoteToCopy.cloneNode(true);
-            copiedNode.classList.remove("list-element-selected", "remote");
-            copiedNode.classList.add("local");
-            copiedNode.onclick = selectNode()
-            if (
-                copyResult.parentId === null ||
-                document.querySelector('.local[data-id="' + copyResult.parentId + '"]') == null
-            ) {
-                let copyDiv = document.getElementById("local-tree");
-                let ul = document.createElement("ul");
-                ul.append(copiedNode);
-                copyDiv.appendChild(ul);
-                copyDiv.appendChild(document.createElement("ul"));
-            } else {
-                if (document.querySelector('.local[data-id="' + copyResult.parentId + '"] ~ ul') == null) {
-                    document.querySelector('.local[data-id="' + copyResult.parentId + '"]').after(document.createElement("ul"));
-                }
-                document.querySelector('.local[data-id="' + copyResult.parentId + '"]').nextSibling.append(copiedNode);
-            }
-            let aloneNodes = document.querySelectorAll('.local[data-parent-id="' + copiedNode.dataset.id + '"]');
-            deepCopy(aloneNodes);
-            if (copyResult.deleted) {
-                deleteNode(copiedNode)
-            }
-        }
-
-        fetch("/v2/tree/node/copy",
+        fetch(`/tree/node/${selectedNode.dataset.id}/copy`,
             {
                 method: "POST",
-                headers:{"content-type":"application/json"},
-                body: JSON.stringify(postBody)
+                headers:{"content-type":"application/json"}
             })
             .then( response => {
                 return response.json();
             })
             .then( data => {
-                for (let i = 0; i <data.length; i++) {
-                    processCopiedNode(data[i]);
-                }
+                return renderLocalTree(data);
             });
     }
 
     function deleteNode(selectedNode) {
         if (selectedNode === null) {
+            alert("Не выбрана нода для удаления")
             return false;
         }
 
-        let postBody = {
-            id: selectedNode.dataset.id
-        }
-
-        fetch("/v2/tree/node",
+        fetch(`/tree/node/${selectedNode.dataset.id}`,
             {
                 method: "DELETE",
-                headers:{"content-type":"application/json"},
-                body: JSON.stringify(postBody)
+                headers:{"content-type":"application/json"}
             })
             .then( response => {
-                return true;
+                return response.json();
             })
             .then( data => {
-                document.querySelectorAll('.local[data-parents~="' + selectedNode.dataset.id + '"]')
-                    .forEach(function (element) {
-                        element.classList.add("list-element-deleted")
-                    })
+                renderLocalTree(data);
             });
     }
 
     function renameNode() {
-        if (selectedNode === null) {
-            return false;
-        }
-        if (selectedNode.classList.contains("list-element-deleted")) {
-            alert("Нельзя добавить к удаленному элементу")
+        if (
+            selectedNode === null // ||
+            // selectedNode.classList.contains("remote")
+        ) {
+            alert("Выберите элемент для редактирования")
             return false;
         }
 
@@ -229,35 +170,25 @@ function ready() {
             return false;
         }
 
-        let postBody = {
-            id: selectedNode.dataset.id,
-            value: newNodeValue
-        }
-
-        fetch("/v2/tree/node",
+        fetch(`/tree/node/${selectedNode.dataset.id}`,
             {
                 method: "PATCH",
                 headers:{"content-type":"application/json"},
-                body: JSON.stringify(postBody)
+                body: JSON.stringify({value: newNodeValue})
             })
             .then( response => {
                 return response.json();
             })
             .then( data => {
-                document.querySelector('.local[data-id="' + selectedNode.dataset.id + '"]').textContent = newNodeValue
+                renderLocalTree(data)
             });
     }
 
     function addNode() {
         if (
-            selectedNode == null ||
-            !selectedNode.classList.contains("local")
+            selectedNode == null
         ) {
             alert("Выделите элемент локальной БД")
-            return false;
-        }
-        if (selectedNode.classList.contains("list-element-deleted")) {
-            alert("Нельзя добавить к удаленному элементу")
             return false;
         }
 
@@ -267,36 +198,22 @@ function ready() {
             return false;
         }
 
-        let postBody = {
-            parentId: selectedNode.dataset.id,
-            value: newNodeValue
-        }
-
-        fetch("/v2/tree/node",
+        fetch(`/tree/node/${selectedNode.dataset.id}/add-child`,
             {
                 method: "POST",
                 headers:{"content-type":"application/json"},
-                body: JSON.stringify(postBody)
+                body: JSON.stringify({value: newNodeValue})
             })
             .then( response => {
-                if (response.ok) {
                     return response.json();
-                }
-
-                console.log(response)
             })
             .then( data => {
-                if (document.querySelector('.local[data-id="' + data.parentId + '"] + ul') === null) {
-                    document.querySelector('.local[data-id="' + data.parentId + '"]').after(document.createElement("ul"));
+                if (data.error) {
+                    alert(data.error)
+                    return
                 }
-                let newElement = document.createElement("li")
-                newElement.textContent = data.value;
-                newElement.dataset.id = data.id;
-                newElement.dataset.parentId = data.parentId;
-                newElement.dataset.parents = [selectedNode.dataset.parents, data.id].join(" ");
-                newElement.classList.add("list-element-base", "local")
-                newElement.onclick = selectNode()
-                document.querySelector('.local[data-id="' + data.parentId + '"] + ul').append(newElement);
+
+                renderLocalTree(data)
             });
     }
 }

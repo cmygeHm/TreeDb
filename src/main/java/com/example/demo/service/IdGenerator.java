@@ -1,12 +1,12 @@
-package com.example.demo.model;
+package com.example.demo.service;
 
 public class IdGenerator {
-    private static Long id = 0L;
+    private static Long id = 1L;
     public static Long getId() {
         return id++;
     }
 
     public static void reset() {
-        id = 0L;
+        id = 1L;
     }
 }
