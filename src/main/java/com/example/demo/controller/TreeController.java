@@ -103,10 +103,7 @@ public class TreeController {
     @PostMapping("/node/{nodeId}/copy")
     public ResponseEntity<List<Node>> copy(@PathVariable(value="nodeId") Long id) {
         if (nodesMap.get(id) != null) {
-            return new ResponseEntity(
-                    new ApiError("element already copied"),
-                    HttpStatus.BAD_REQUEST
-            );
+            return createErrorResponse("Элемент уже присутствует в локальном кеше");
         }
         var record = remoteDb.getById(id);
         Node node = Node.builder()
@@ -151,16 +148,13 @@ public class TreeController {
     ) {
         Node parentNode = nodesMap.get(parentId);
         if (parentNode == null) {
-            return new ResponseEntity(
-                    new ApiError("Parent node not found"),
-                    HttpStatus.BAD_REQUEST
-            );
+            return createErrorResponse("Родительский элемент не найден");
+        }
+        if (parentNode.isDeleted()) {
+            return createErrorResponse("Нельзя привязать элемент к удаленному родителю");
         }
         if (nodeValue.getValue() == null) {
-            return new ResponseEntity(
-                    new ApiError("Node value required"),
-                    HttpStatus.BAD_REQUEST
-            );
+            return createErrorResponse("Значение для элемента не было передано");
         }
 
         var set = new HashSet<>(parentNode.getParentIds());
@@ -188,16 +182,10 @@ public class TreeController {
     ) {
         Node node = nodesMap.get(id);
         if (node == null) {
-            return new ResponseEntity(
-                    new ApiError("Element not found to edit"),
-                    HttpStatus.BAD_REQUEST
-            );
+            return createErrorResponse("Элемент не найден в локальном кеше");
         }
         if (node.isDeleted()) {
-            return new ResponseEntity(
-                    new ApiError("You can't edit deleted node"),
-                    HttpStatus.BAD_REQUEST
-            );
+            return createErrorResponse("Нельзя редактировать удаленный элемент");
         }
 
         node.setValue(nodeValue.getValue());
@@ -211,10 +199,7 @@ public class TreeController {
     ) {
         Node nodeToDelete = nodesMap.get(id);
         if (nodeToDelete == null) {
-            return new ResponseEntity(
-                    new ApiError("Element not found to delete"),
-                    HttpStatus.BAD_REQUEST
-            );
+            return createErrorResponse("Элемент не найден в локальном кеше");
         }
         nodeToDelete.setDeleted(true);
 
@@ -225,5 +210,12 @@ public class TreeController {
         });
 
         return new ResponseEntity(new ArrayList(roots.values()), HttpStatus.OK);
+    }
+
+    private static ResponseEntity createErrorResponse(String errorMessage) {
+        return new ResponseEntity(
+                new ApiError(errorMessage),
+                HttpStatus.BAD_REQUEST
+        );
     }
 }
