@@ -1,9 +1,7 @@
 package com.example.demo.service;
 
 import javax.annotation.Nonnull;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.Map;
+import java.util.*;
 
 public class RemoteDb {
 
@@ -74,7 +72,12 @@ public class RemoteDb {
         return records;
     }
 
-    public void apply(Map<Long, Record> map) {
-        records.putAll(map);
+    public void apply(@Nonnull Map<Long, Record> updatedRecords,
+                      @Nonnull Set<Long> deletedParents) {
+        records.putAll(updatedRecords);
+        records.entrySet()
+                .stream()
+                .filter(record -> !Collections.disjoint(record.getValue().getParentIds(), deletedParents))
+                .forEach(record -> record.getValue().setDeleted(true));
     }
 }

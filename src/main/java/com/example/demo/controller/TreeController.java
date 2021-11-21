@@ -19,14 +19,7 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.Iterator;
-import java.util.List;
-import java.util.Map;
-import java.util.Optional;
+import java.util.*;
 
 @RestController
 @RequestMapping("/tree")
@@ -36,14 +29,12 @@ public class TreeController {
 
     private Map<Long, Node> roots = new HashMap<>();
     private Map<Long, Node> nodesMap = new HashMap<>();
-    private Map<Long, List<Node>> newNodesMap = new HashMap<>();
 
     @GetMapping("/load-origin-tree")
     public List<Node> loadOriginTree() {
         remoteDb.reset();
         roots = new HashMap<>();
         nodesMap = new HashMap<>();
-        newNodesMap = new HashMap<>();
 
         return Collections.singletonList(
                 NodeFactory.buildTree(new HashMap<>(remoteDb.getAll()))
@@ -52,52 +43,27 @@ public class TreeController {
 
     @PostMapping("/apply")
     public List<Node> apply() {
-        Node remoteTree = NodeFactory.buildTree(new HashMap<>(remoteDb.getAll()));
-        Map<Long, Record> updatedRecords = new HashMap<>();
+        Map<Long, Record> updatedRecords = new HashMap<>(nodesMap.size());
+        Set<Long> deletedParents = new HashSet<>(nodesMap.size());
+        nodesMap.forEach((key, node) -> {
+            Record record = Record.builder()
+                    .withId(node.getId())
+                    .withParentId(node.getParentId())
+                    .withValue(node.getValue())
+                    .withParentIds(node.getParentIds())
+                    .witIsDeleted(node.isDeleted())
+                    .build();
+            updatedRecords.put(record.getId(), record);
+            if (record.isDeleted()) {
+                deletedParents.add(record.getId());
+            }
+        });
 
-        recursiveTraversal(remoteTree, updatedRecords);
-
-        remoteDb.apply(updatedRecords);
+        remoteDb.apply(updatedRecords, deletedParents);
 
         return Collections.singletonList(
-                NodeFactory.buildTree(remoteDb.getAll())
+                NodeFactory.buildTree(new HashMap<>(remoteDb.getAll()))
         );
-    }
-
-    private void recursiveTraversal(Node topNode, Map<Long, Record> updatedRecords) {
-        Node localNode = nodesMap.get(topNode.getId());
-        if (localNode != null) {
-            if (localNode.isDeleted()) {
-                topNode.setDeleted(localNode.isDeleted());
-            }
-            if (!localNode.getValue().equals(topNode.getValue())) {
-                topNode.setValue(localNode.getValue());
-            }
-        }
-
-        Record record = Record.builder()
-                .withId(topNode.getId())
-                .withParentId(topNode.getParentId())
-                .withValue(topNode.getValue())
-                .withParentIds(topNode.getParentIds())
-                .witIsDeleted(topNode.isDeleted())
-                .build();
-        updatedRecords.put(topNode.getId(), record);
-
-        List<Node> localChildNodes = newNodesMap.get(topNode.getId());
-        if (localChildNodes != null) {
-            Iterator<Node> i = localChildNodes.iterator();
-            while (i.hasNext()) {
-                Node newChild = i.next();
-                Node t = nodesMap.get(newChild.getId());
-                topNode.addChildNode(newChild);
-                i.remove();
-            }
-        }
-
-        for (Node child : topNode.getChildNodes()) {
-            recursiveTraversal(child, updatedRecords);
-        }
     }
 
     @PostMapping("/node/{nodeId}/copy")
@@ -106,6 +72,9 @@ public class TreeController {
             return createErrorResponse("Элемент уже присутствует в локальном кеше");
         }
         var record = remoteDb.getById(id);
+        if (record.isDeleted()) {
+            return createErrorResponse("Нельзя копировать удаленный элемент");
+        }
         Node node = Node.builder()
                 .withId(record.getId())
                 .withParentId(record.getParentId())
@@ -169,8 +138,6 @@ public class TreeController {
                 .build();
         parentNode.addChildNode(node);
         nodesMap.put(node.getId(), node);
-        newNodesMap.putIfAbsent(node.getParentId(), new ArrayList<>());
-        newNodesMap.get(node.getParentId()).add(node);
 
         return new ResponseEntity(new ArrayList(roots.values()), HttpStatus.OK);
     }

@@ -14,7 +14,7 @@ public class Record {
     @Nonnull
     private final String value;
     @Nonnull
-    private final Boolean isDeleted;
+    private Boolean isDeleted;
     @Nonnull
     private final Set<Long> parentIds;
 
@@ -54,6 +54,11 @@ public class Record {
     @Nonnull
     public Boolean isDeleted() {
         return isDeleted;
+    }
+
+    @Nonnull
+    public void setDeleted(Boolean isDeleted) {
+        this.isDeleted = isDeleted;
     }
 
     @Nonnull
