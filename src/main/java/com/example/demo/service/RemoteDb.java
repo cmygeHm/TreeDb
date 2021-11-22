@@ -2,6 +2,7 @@ package com.example.demo.service;
 
 import javax.annotation.Nonnull;
 import java.util.*;
+import java.util.stream.Collectors;
 
 public class RemoteDb {
 
@@ -64,8 +65,20 @@ public class RemoteDb {
                 .build();
     }
 
-    public Record getById(Long id) {
-        return records.get(id);
+    public Record getById(Long id, Set<Long> localKeys) {
+        Record record = records.get(id);
+        Set<Long> filteredParents = record.getParentIds()
+                .stream()
+                .filter(localKeys::contains)
+                .collect(Collectors.toSet());
+
+        return Record.builder()
+                .withId(record.getId())
+                .withValue(record.getValue())
+                .withIsDeleted(record.isDeleted())
+                .withParentId(record.getParentId())
+                .withParentIds(filteredParents)
+                .build();
     }
 
     public Map<Long, Record> getAll() {

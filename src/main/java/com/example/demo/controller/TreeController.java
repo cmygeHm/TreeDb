@@ -51,7 +51,7 @@ public class TreeController {
                     .withParentId(node.getParentId())
                     .withValue(node.getValue())
                     .withParentIds(node.getParentIds())
-                    .witIsDeleted(node.isDeleted())
+                    .withIsDeleted(node.isDeleted())
                     .build();
             updatedRecords.put(record.getId(), record);
             if (record.isDeleted()) {
@@ -71,7 +71,7 @@ public class TreeController {
         if (nodesMap.get(id) != null) {
             return createErrorResponse("Элемент уже присутствует в локальном кеше");
         }
-        var record = remoteDb.getById(id);
+        var record = remoteDb.getById(id, nodesMap.keySet());
         if (record.isDeleted()) {
             return createErrorResponse("Нельзя копировать удаленный элемент");
         }

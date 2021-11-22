@@ -107,7 +107,7 @@ public class Record {
             return this;
         }
 
-        public Builder witIsDeleted(boolean deleted) {
+        public Builder withIsDeleted(boolean deleted) {
             this.deleted = deleted;
             return this;
         }
