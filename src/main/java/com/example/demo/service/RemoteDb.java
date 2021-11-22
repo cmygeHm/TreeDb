@@ -60,6 +60,7 @@ public class RemoteDb {
         return Record.builder()
                 .withId(IdGenerator.getId())
                 .withParentId(parentRecord.getId())
+                .withParentIds(parentRecord.getParentIds())
                 .build();
     }
 
@@ -71,28 +72,12 @@ public class RemoteDb {
         return records;
     }
 
-    public Set<Long> apply(@Nonnull Map<Long, Record> updatedRecords,
+    public void apply(@Nonnull Map<Long, Record> updatedRecords,
                       @Nonnull Set<Long> deletedParents) {
         records.putAll(updatedRecords);
-        Set<Long> deletedChildNodesIds = new HashSet<>();
-        deleteChildNodes(deletedParents, deletedChildNodesIds);
-        return deletedChildNodesIds;
-    }
-
-    private void deleteChildNodes(@Nonnull Set<Long> deletedParents,
-                                  @Nonnull Set<Long> deletedChildNodesIds) {
-        Set<Long> touchedNodesIds = new HashSet<>();
         records.entrySet()
                 .stream()
-                .filter(record -> deletedParents.contains(record.getValue().getParentId()) && !record.getValue().isDeleted())
-                .forEach(record -> {
-                    record.getValue().setDeleted(true);
-                    touchedNodesIds.add(record.getKey());
-                    deletedChildNodesIds.add(record.getKey());
-                });
-        if (touchedNodesIds.isEmpty()) {
-            return;
-        }
-        deleteChildNodes(touchedNodesIds, deletedChildNodesIds);
+                .filter(record -> !Collections.disjoint(record.getValue().getParentIds(), deletedParents))
+                .forEach(record -> record.getValue().setDeleted(true));
     }
 }

@@ -16,19 +16,23 @@ public class Node {
     @Nonnull
     private final Set<Node> childNodes;
     @Nonnull
+    private final Set<Long> parentIds;
+    @Nonnull
     private Boolean isDeleted;
 
     private Node(@Nonnull Long id,
                  @Nonnull Long parentId,
                  @Nonnull String value,
                  @Nonnull Set<Node> childNodes,
-                 @Nonnull Boolean isDeleted
+                 @Nonnull Boolean isDeleted,
+                 @Nonnull Set<Long> parentIds
     ) {
         this.id = requireNonNull(id, "id");
         this.parentId = requireNonNull(parentId, "parentId");
         this.value = requireNonNull(value, "value");
         this.childNodes = requireNonNull(childNodes, "childNodes");
         this.isDeleted = requireNonNull(isDeleted, "isDeleted");
+        this.parentIds = requireNonNull(parentIds, "parentIds");
     }
 
     @Nonnull
@@ -76,6 +80,11 @@ public class Node {
         childNodes.add(child);
     }
 
+    @Nonnull
+    public Set<Long> getParentIds() {
+        return parentIds;
+    }
+
     @Override
     public String toString() {
         return "Node{" +
@@ -83,6 +92,7 @@ public class Node {
                 ", parentId=" + parentId +
                 ", value='" + value + '\'' +
                 ", childNodes=" + childNodes +
+                ", parentIds=" + parentIds +
                 ", isDeleted=" + isDeleted +
                 '}';
     }
@@ -110,6 +120,7 @@ public class Node {
         private Long parentId;
         private String value;
         private final Set<Node> childNodes;
+        private Set<Long> parentIds;
         private Boolean isDeleted = false;
 
         private Builder() {
@@ -136,13 +147,19 @@ public class Node {
             return this;
         }
 
+        public Builder withParentIds(@Nonnull Set<Long> parentIds) {
+            this.parentIds = parentIds;
+            return this;
+        }
+
         @Nonnull
         public Node build() {
             return new Node(id,
                     parentId,
                     value,
                     childNodes,
-                    isDeleted);
+                    isDeleted,
+                    parentIds);
         }
     }
 }
