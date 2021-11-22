@@ -5,8 +5,8 @@ import com.example.demo.model.NodeValue;
 import com.example.demo.service.IdGenerator;
 import com.example.demo.model.Node;
 import com.example.demo.service.NodeFactory;
-import com.example.demo.service.Record;
-import com.example.demo.service.RemoteDb;
+import com.example.demo.remote.Record;
+import com.example.demo.remote.Repository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -25,7 +25,7 @@ import java.util.*;
 @RequestMapping("/tree")
 public class TreeController {
     @Autowired
-    private RemoteDb remoteDb;
+    private Repository remoteDb;
 
     private Map<Long, Node> roots = new HashMap<>();
     private Map<Long, Node> nodesMap = new HashMap<>();
@@ -42,7 +42,7 @@ public class TreeController {
     }
 
     @PostMapping("/apply")
-    public List<Node> apply() {
+    public HashMap<String, List<Node>> apply() {
         Map<Long, Record> updatedRecords = new HashMap<>(nodesMap.size());
         Set<Long> deletedParents = new HashSet<>(nodesMap.size());
         nodesMap.forEach((key, node) -> {
@@ -50,7 +50,6 @@ public class TreeController {
                     .withId(node.getId())
                     .withParentId(node.getParentId())
                     .withValue(node.getValue())
-                    .withParentIds(node.getParentIds())
                     .withIsDeleted(node.isDeleted())
                     .build();
             updatedRecords.put(record.getId(), record);
@@ -59,11 +58,18 @@ public class TreeController {
             }
         });
 
-        remoteDb.apply(updatedRecords, deletedParents);
+        Set<Long> deletedChildNodeIds = remoteDb.apply(updatedRecords, deletedParents);
+        deletedChildNodeIds.stream()
+                .forEach(i -> nodesMap.computeIfPresent(i, (id, node) -> node.setDeleted(true)));
 
-        return Collections.singletonList(
+        HashMap<String, List<Node>> response = new HashMap<>(2);
+        response.put("cache", new ArrayList(roots.values()));
+        response.put("db", Collections.singletonList(
                 NodeFactory.buildTree(new HashMap<>(remoteDb.getAll()))
+            )
         );
+
+        return response;
     }
 
     @PostMapping("/node/{nodeId}/copy")
@@ -80,7 +86,6 @@ public class TreeController {
                 .withParentId(record.getParentId())
                 .withValue(record.getValue())
                 .withIsDeleted(record.isDeleted())
-                .withParentIds(record.getParentIds())
                 .build();
 
         nodesMap.put(node.getId(), node);
@@ -100,7 +105,7 @@ public class TreeController {
                 it.remove();
             }
             if (
-                    node.getParentIds().contains(aloneNode.getId()) &&
+                    node.getParentId().equals(aloneNode.getId()) &&
                     aloneNode.isDeleted()
             ) {
                 node.setDeleted(true);
@@ -126,15 +131,12 @@ public class TreeController {
             return createErrorResponse("Значение для элемента не было передано");
         }
 
-        var set = new HashSet<>(parentNode.getParentIds());
         Long id = IdGenerator.getId();
-        set.add(id);
 
         Node node = Node.builder()
                 .withId(id)
                 .withParentId(parentId)
                 .withValue(nodeValue.getValue())
-                .withParentIds(set)
                 .build();
         parentNode.addChildNode(node);
         nodesMap.put(node.getId(), node);
@@ -171,7 +173,7 @@ public class TreeController {
         nodeToDelete.setDeleted(true);
 
         roots.forEach((key, node) -> {
-            if (node.getParentIds().contains(nodeToDelete.getId())) {
+            if (node.getParentId().equals(nodeToDelete.getId())) {
                 node.setDeleted(true);
             }
         });

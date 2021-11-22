@@ -1,6 +1,7 @@
 package com.example.demo.service;
 
 import com.example.demo.model.Node;
+import com.example.demo.remote.Record;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -16,7 +17,6 @@ public class NodeFactory {
                    .withParentId(value.getParentId())
                    .withValue(value.getValue())
                    .withIsDeleted(value.isDeleted())
-                   .withParentIds(value.getParentIds())
                    .build();
            nodes.put(node.getId(), node);
        });

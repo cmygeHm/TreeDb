@@ -1,15 +1,20 @@
-package com.example.demo.service;
+package com.example.demo.remote;
+
+import com.example.demo.service.IdGenerator;
 
 import javax.annotation.Nonnull;
 import java.util.*;
 import java.util.stream.Collectors;
 
-public class RemoteDb {
+public class Repository {
 
     @Nonnull
     private Map<Long, Record> records = new HashMap<>();
 
-    public RemoteDb() {
+    @Nonnull
+    private Node localCacheTree;
+
+    public Repository() {
         reset();
     }
 
@@ -19,7 +24,6 @@ public class RemoteDb {
         Record root = Record.builder()
             .withId(IdGenerator.getId())
             .withParentId(0L)
-            .withParentIds(new HashSet<>())
             .build();
 
         Record n1 = createRecord(root);
@@ -54,6 +58,8 @@ public class RemoteDb {
         records.put(n1111.getId(), n1111);
         records.put(n1112.getId(), n1112);
 
+        initTree();
+
         return records;
     }
 
@@ -61,23 +67,17 @@ public class RemoteDb {
         return Record.builder()
                 .withId(IdGenerator.getId())
                 .withParentId(parentRecord.getId())
-                .withParentIds(parentRecord.getParentIds())
                 .build();
     }
 
     public Record getById(Long id, Set<Long> localKeys) {
         Record record = records.get(id);
-        Set<Long> filteredParents = record.getParentIds()
-                .stream()
-                .filter(localKeys::contains)
-                .collect(Collectors.toSet());
 
         return Record.builder()
                 .withId(record.getId())
                 .withValue(record.getValue())
                 .withIsDeleted(record.isDeleted())
                 .withParentId(record.getParentId())
-                .withParentIds(filteredParents)
                 .build();
     }
 
@@ -85,12 +85,60 @@ public class RemoteDb {
         return records;
     }
 
-    public void apply(@Nonnull Map<Long, Record> updatedRecords,
+    public Set<Long> apply(@Nonnull Map<Long, Record> updatedRecords,
                       @Nonnull Set<Long> deletedParents) {
         records.putAll(updatedRecords);
+
+        Set<Long> deletedIds = new HashSet<>(records.size());
+        return deleteRecords(localCacheTree, deletedParents, deletedIds);
+    }
+
+    private Set<Long> deleteRecords(
+            Node topNode,
+            Set<Long> deletedParents,
+            Set<Long> deletedIds
+    ) {
+        if (deletedParents.contains(topNode.getId())) {
+            if (!topNode.isDeleted()) {
+                topNode.setDeleted(true, deletedIds::add);
+            }
+        } else if (!topNode.getChildNodes().isEmpty()) {
+            for (Node child: topNode.getChildNodes()) {
+                deleteRecords(child, deletedParents, deletedIds);
+            }
+        }
+
         records.entrySet()
                 .stream()
-                .filter(record -> !Collections.disjoint(record.getValue().getParentIds(), deletedParents))
+                .filter(record -> deletedIds.contains(record.getKey()))
                 .forEach(record -> record.getValue().setDeleted(true));
+
+        return deletedIds;
+    }
+
+    private void initTree() {
+        Map<Long, Node> nodes = new HashMap<>(records.size());
+        records.forEach((key, value) -> {
+            Node node = Node.builder()
+                    .withId(value.getId())
+                    .withParentId(value.getParentId())
+                    .withIsDeleted(value.isDeleted())
+                    .build();
+            nodes.put(node.getId(), node);
+        });
+
+        nodes.forEach((key, value) -> {
+            Node parent = nodes.get(value.getParentId());
+            if (parent != null) {
+                parent.addChildNode(value);
+            }
+        });
+
+        localCacheTree = nodes.entrySet()
+                .stream()
+                .filter(entry -> entry.getValue().getParentId() == 0L)
+                .findFirst()
+                .get()
+                .getValue();
     }
 }

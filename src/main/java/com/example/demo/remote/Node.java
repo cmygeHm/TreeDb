@@ -1,8 +1,9 @@
-package com.example.demo.model;
+package com.example.demo.remote;
 
 import javax.annotation.Nonnull;
 import java.util.HashSet;
 import java.util.Set;
+import java.util.function.Consumer;
 
 import static java.util.Objects.requireNonNull;
 
@@ -12,21 +13,17 @@ public class Node {
     @Nonnull
     private final Long parentId;
     @Nonnull
-    private String value;
-    @Nonnull
     private final Set<Node> childNodes;
     @Nonnull
     private Boolean isDeleted;
 
     private Node(@Nonnull Long id,
                  @Nonnull Long parentId,
-                 @Nonnull String value,
                  @Nonnull Set<Node> childNodes,
                  @Nonnull Boolean isDeleted
     ) {
         this.id = requireNonNull(id, "id");
         this.parentId = requireNonNull(parentId, "parentId");
-        this.value = requireNonNull(value, "value");
         this.childNodes = requireNonNull(childNodes, "childNodes");
         this.isDeleted = requireNonNull(isDeleted, "isDeleted");
     }
@@ -47,15 +44,6 @@ public class Node {
     }
 
     @Nonnull
-    public String getValue() {
-        return value;
-    }
-
-    public void setValue(String value) {
-        this.value = value;
-    }
-
-    @Nonnull
     public Set<Node> getChildNodes() {
         return childNodes;
     }
@@ -65,28 +53,16 @@ public class Node {
         return isDeleted;
     }
 
-    public Node setDeleted(boolean isDeleted) {
+    public void setDeleted(boolean isDeleted, Consumer<Long> consumer) {
         this.isDeleted = isDeleted;
+        consumer.accept(this.id);
 
-        childNodes.forEach(n -> n.setDeleted(isDeleted));
-
-        return this;
+        childNodes.forEach(n -> n.setDeleted(isDeleted, consumer));
     }
 
     @Nonnull
     public void addChildNode(Node child) {
         childNodes.add(child);
-    }
-
-    @Override
-    public String toString() {
-        return "Node{" +
-                "id=" + id +
-                ", parentId=" + parentId +
-                ", value='" + value + '\'' +
-                ", childNodes=" + childNodes +
-                ", isDeleted=" + isDeleted +
-                '}';
     }
 
     @Override
@@ -110,7 +86,6 @@ public class Node {
     public static final class Builder {
         private Long id;
         private Long parentId;
-        private String value;
         private final Set<Node> childNodes;
         private Boolean isDeleted = false;
 
@@ -128,11 +103,6 @@ public class Node {
             return this;
         }
 
-        public Builder withValue(@Nonnull String value) {
-            this.value = value;
-            return this;
-        }
-
         public Builder withIsDeleted(@Nonnull Boolean isDeleted) {
             this.isDeleted = isDeleted;
             return this;
@@ -142,9 +112,9 @@ public class Node {
         public Node build() {
             return new Node(id,
                     parentId,
-                    value,
                     childNodes,
-                    isDeleted);
+                    isDeleted
+                    );
         }
     }
 }

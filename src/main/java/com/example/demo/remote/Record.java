@@ -1,9 +1,6 @@
-package com.example.demo.service;
+package com.example.demo.remote;
 
 import javax.annotation.Nonnull;
-import java.util.HashSet;
-import java.util.Set;
-
 import static java.util.Objects.requireNonNull;
 
 public class Record {
@@ -15,19 +12,14 @@ public class Record {
     private final String value;
     @Nonnull
     private Boolean isDeleted;
-    @Nonnull
-    private final Set<Long> parentIds;
 
     private Record(@Nonnull Long id,
                    @Nonnull Long parentId,
                    @Nonnull String value,
-                   @Nonnull Set<Long> parentIds,
                    @Nonnull Boolean isDeleted) {
         this.id = requireNonNull(id, "id");
         this.parentId = requireNonNull(parentId, "parentId");
         this.value = requireNonNull(value, "value");
-        this.parentIds = requireNonNull(parentIds, "parentIds");
-        parentIds.add(id);
         this.isDeleted = requireNonNull(isDeleted, "isDeleted");
     }
 
@@ -61,11 +53,6 @@ public class Record {
         this.isDeleted = isDeleted;
     }
 
-    @Nonnull
-    public Set<Long> getParentIds() {
-        return new HashSet<>(parentIds);
-    }
-
     @Override
     public String toString() {
         return "Record{" +
@@ -73,7 +60,6 @@ public class Record {
                 ", parentId=" + parentId +
                 ", value='" + value + '\'' +
                 ", isDeleted=" + isDeleted +
-                ", parentIds=" + parentIds +
                 '}';
     }
 
@@ -82,7 +68,6 @@ public class Record {
         private Long parentId;
         private String value;
         private Boolean deleted = false;
-        private Set<Long> parentIds;
 
         private Builder() {
         }
@@ -94,11 +79,6 @@ public class Record {
 
         public Builder withParentId(@Nonnull Long parentId) {
             this.parentId = parentId;
-            return this;
-        }
-
-        public Builder withParentIds(@Nonnull Set<Long> parentIds) {
-            this.parentIds = parentIds;
             return this;
         }
 
@@ -117,7 +97,7 @@ public class Record {
             if (value == null) {
                 value = "node " + id;
             }
-            return new Record(id, parentId, value, parentIds, deleted);
+            return new Record(id, parentId, value, deleted);
         }
     }
 }
