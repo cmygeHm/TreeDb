@@ -15,19 +15,14 @@ public class Record {
     private final String value;
     @Nonnull
     private Boolean isDeleted;
-    @Nonnull
-    private final Set<Long> parentIds;
 
     private Record(@Nonnull Long id,
                    @Nonnull Long parentId,
                    @Nonnull String value,
-                   @Nonnull Set<Long> parentIds,
                    @Nonnull Boolean isDeleted) {
         this.id = requireNonNull(id, "id");
         this.parentId = requireNonNull(parentId, "parentId");
         this.value = requireNonNull(value, "value");
-        this.parentIds = requireNonNull(parentIds, "parentIds");
-        parentIds.add(id);
         this.isDeleted = requireNonNull(isDeleted, "isDeleted");
     }
 
@@ -61,11 +56,6 @@ public class Record {
         this.isDeleted = isDeleted;
     }
 
-    @Nonnull
-    public Set<Long> getParentIds() {
-        return new HashSet<>(parentIds);
-    }
-
     @Override
     public String toString() {
         return "Record{" +
@@ -73,7 +63,6 @@ public class Record {
                 ", parentId=" + parentId +
                 ", value='" + value + '\'' +
                 ", isDeleted=" + isDeleted +
-                ", parentIds=" + parentIds +
                 '}';
     }
 
@@ -117,7 +106,10 @@ public class Record {
             if (value == null) {
                 value = "node " + id;
             }
-            return new Record(id, parentId, value, parentIds, deleted);
+            return new Record(id,
+                    parentId,
+                    value,
+                    deleted);
         }
     }
 }

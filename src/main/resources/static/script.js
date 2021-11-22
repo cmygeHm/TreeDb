@@ -96,10 +96,15 @@ function ready() {
                 return response.json();
             })
             .then( data => {
-                let div = document.getElementById("remote-tree");
-                div.innerHTML = "";
-                for (let i = 0; i < data.length; i++) {
-                    renderNode(data[i], div, true);
+                let remoteDiv = document.getElementById("remote-tree");
+                remoteDiv.innerHTML = "";
+                for (let i = 0; i < data.db.length; i++) {
+                    renderNode(data.db[i], remoteDiv, true);
+                }
+                let localDiv = document.getElementById("local-tree");
+                localDiv.innerHTML = "";
+                for (let i = 0; i < data.cache.length; i++) {
+                    renderNode(data.cache[i], localDiv, false);
                 }
             });
     }
