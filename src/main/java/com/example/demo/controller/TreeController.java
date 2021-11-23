@@ -77,7 +77,7 @@ public class TreeController {
         if (nodesMap.get(id) != null) {
             return createErrorResponse("Элемент уже присутствует в локальном кеше");
         }
-        var record = remoteDb.getById(id, nodesMap.keySet());
+        var record = remoteDb.getById(id);
         if (record.isDeleted()) {
             return createErrorResponse("Нельзя копировать удаленный элемент");
         }

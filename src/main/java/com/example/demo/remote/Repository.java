@@ -70,7 +70,7 @@ public class Repository {
                 .build();
     }
 
-    public Record getById(Long id, Set<Long> localKeys) {
+    public Record getById(Long id) {
         Record record = records.get(id);
 
         return Record.builder()
@@ -87,10 +87,49 @@ public class Repository {
 
     public Set<Long> apply(@Nonnull Map<Long, Record> updatedRecords,
                       @Nonnull Set<Long> deletedParents) {
+        Set<Long> newIds = updatedRecords.keySet();
+        newIds.removeAll(records.keySet());
+        Map<Long, Map<Long, Record>> recordsGroupedByParentId = new HashMap<>(newIds.size());
+        for (Long id: newIds) {
+            Record newRecord = updatedRecords.get(id);
+            if (!recordsGroupedByParentId.containsKey(newRecord.getParentId())) {
+                recordsGroupedByParentId.put(newRecord.getParentId(), new HashMap<>());
+            }
+            recordsGroupedByParentId.get(newRecord.getParentId()).put(
+                    id, newRecord
+            );
+        }
+        addNewIdsToCacheTree(recordsGroupedByParentId);
+        
         records.putAll(updatedRecords);
 
         Set<Long> deletedIds = new HashSet<>(records.size());
         return deleteRecords(localCacheTree, deletedParents, deletedIds);
+    }
+
+    private void addNewIdsToCacheTree(Map<Long, Map<Long, Record>> newRecordsGroupedByParentId) {
+        recursiveUpdateTree(localCacheTree, newRecordsGroupedByParentId);
+    }
+
+    private void recursiveUpdateTree(
+            Node topNode,
+            Map<Long, Map<Long, Record>> newRecordsGroupedByParentId
+    ) {
+        if (newRecordsGroupedByParentId.containsKey(topNode.getId())) {
+            Iterator<Map.Entry<Long, Record>> iterator = newRecordsGroupedByParentId.get(topNode.getId()).entrySet().iterator();
+            while (iterator.hasNext()) {
+                Record record = iterator.next().getValue();
+                Node node = Node.builder()
+                        .withId(record.getId())
+                        .withParentId(record.getParentId())
+                        .build();
+                topNode.addChildNode(node);
+                iterator.remove();
+            }
+        }
+        for (Node child : topNode.getChildNodes()) {
+            recursiveUpdateTree( child, newRecordsGroupedByParentId);
+        }
     }
 
     private Set<Long> deleteRecords(

@@ -76,6 +76,9 @@ public class Node {
     @Nonnull
     public void addChildNode(Node child) {
         childNodes.add(child);
+        if (isDeleted) {
+            child.setDeleted(true);
+        }
     }
 
     @Override
